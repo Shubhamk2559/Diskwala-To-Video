@@ -61,7 +61,7 @@ URL_RE = re.compile(r"https?://[^\s<>\"']+")
 # Sirf ye pattern copy hoga. Badalna ho to LINK_PATTERN env var set karo.
 LINK_RE = re.compile(os.getenv("LINK_PATTERN", r"https?://(?:www\.)?diskwala\.com/app/[A-Za-z0-9]+"))
 # Target bot ye message bheje ("Sorry! Download fail ho gaya...") to link skip. SKIP_PATTERN se badlo.
-FAIL_RE = re.compile(os.getenv("SKIP_PATTERN", r"download\s*fail"), re.I)
+FAIL_RE = re.compile(os.getenv("SKIP_PATTERN", r"download\s*fail|fetch\s*fail|fetch\s*nahi|thodi\s*der\s*baad\s*dobara"), re.I)
 FAIL, CANCEL, DEAD = "FAIL", "CANCEL", "DEAD"
 DEAD_RE = re.compile(os.getenv("DEAD_PATTERN", r"link\s*kaam\s*nahi|galat\s*ya\s*remove"), re.I)
 RETRY_HOURS = float(os.getenv("RETRY_HOURS", "3"))  # fail hue posts ka auto-retry (0 = sirf manual /bulkretry)
@@ -780,7 +780,8 @@ async def bulk_run(chat_id, mode="main"):
         if stop_at:
             stop_at = None
             await save(running=False, retry_at=retry_at)
-        await tell(f"🏁 <b>Bulk {mode} complete</b>\n{bulk_summary(bulk_get(), len(posts))}{extra}")
+        await tell(f"🏁 <b>Bulk {mode} complete</b>\n{bulk_summary(bulk_get(), len(posts))}{extra}",
+                   [[Button.inline("🔁 Failed Retry", b"bk_retry")]] if failed else None)
     except Exception as e:
         log.exception("bulk failed")
         await tell(f"❌ Bulk error:\n<code>{html.escape(str(e))}</code>\n📤 Bulk Backup se dobara ▶️ dabao, resume ho jayega.")
@@ -936,7 +937,8 @@ async def range_run(src_key, start, end):
 
         await save(running=False)
         extra = "\n🔁 Failed wale dobara karne ke liye 📺 Channel Range → 🔁 Resume dabao." if failed else ""
-        await tell(f"🏁 <b>Range complete</b>\n✅ {len(done)} done · ❌ {len(failed)} failed{extra}")
+        await tell(f"🏁 <b>Range complete</b>\n✅ {len(done)} done · ❌ {len(failed)} failed{extra}",
+                   [[Button.inline("🔁 Failed Retry", b"range_resume")]] if failed else None)
     except Exception as e:
         log.exception("range failed")
         await tell(f"❌ Range error:\n<code>{html.escape(str(e))}</code>\n📺 Channel Range → 🔁 Resume dabao, resume ho jayega.")
